@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="专注时刻">
+<title>专注时刻</title>
+<style>
+:root{--lk-time:#A8A8A8;--lk-text:#9A9A9A;--lk-hint:#8A8A8A;--lk-btn:#8F8F8F;--bg:#0E1730;--surface:#1F2C4F;--accent:#E8A94C;--on:#1B2237;--text:#F5F3EE;--text2:#A8B3CC;--ok:#6FA98C;--hr:#2A3860;--safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;margin:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;padding-top:var(--safe-t);padding-bottom:var(--safe-b);}
+body.locked{background:#000;}
+h1,h2,h3{font-family:Georgia,'Songti SC','Noto Serif CJK SC','SimSun',serif;margin:0;}
+#app{max-width:460px;margin:0 auto;height:100%;position:relative;}
+.screen{position:absolute;inset:0;padding:36px 18px 22px;display:none;flex-direction:column;overflow-y:auto;}
+.screen.active{display:flex;}
+.btn{border:none;border-radius:14px;padding:15px;font-weight:700;font-size:15px;width:100%;background:var(--accent);color:var(--on);cursor:pointer;font-family:inherit;}
+.btn.sec{background:var(--surface);color:var(--text);} .btn.ghost{background:none;color:var(--text2);font-size:13px;padding:10px;}
+.spacer{flex:1;min-height:12px;} .sub{color:var(--text2);font-size:13.5px;line-height:1.7;} .center{text-align:center;}
+.big{font-size:48px;text-align:center;margin:18px 0;}
+.scenes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;}
+.scene{background:var(--surface);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;position:relative;}
+.scene small{display:block;color:var(--text2);font-weight:400;font-size:11.5px;margin-top:4px;} .scene.soon{opacity:.45;cursor:default;}
+.badge{display:inline-block;background:var(--surface);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text2);}
+textarea{width:100%;border-radius:12px;border:1px solid var(--hr);background:var(--surface);color:var(--text);padding:12px;font-size:14px;resize:none;height:64px;font-family:inherit;}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 14px;}
+.chip{padding:8px 13px;border-radius:16px;font-size:12.5px;background:var(--surface);color:var(--text);cursor:pointer;border:1.5px solid transparent;}
+.chip.on{border-color:var(--accent);} .chip.done{background:var(--ok);color:#fff;cursor:default;}
+.label{font-size:12px;color:var(--text2);margin:10px 0 2px;}
+
+/* 黑屏锁定页：纯黑 + 极暗文字（OLED屏幕上等同于熄屏） */
+#s-lock{background:#000;color:#4a4a4a;padding:0;align-items:center;justify-content:center;text-align:center;}
+#s-lock .time{font-family:Georgia,'Songti SC',serif;font-size:54px;color:var(--lk-time);letter-spacing:2px;}
+#s-lock .topic{margin:14px 36px 0;font-size:15px;line-height:1.7;color:var(--lk-text);}
+#s-lock .hint{margin-top:22px;font-size:12.5px;color:var(--lk-hint);}
+#s-lock .rule{margin:12px 30px 0;font-size:12.5px;line-height:1.8;color:var(--lk-hint);}
+#s-lock .mem{margin-top:14px;font-size:13px;color:var(--lk-text);line-height:1.8;}
+#s-lock .tiny{position:absolute;font-size:12px;color:var(--lk-btn);background:none;border:none;padding:14px;font-family:inherit;cursor:pointer;}
+#end-btn{bottom:calc(14px + var(--safe-b));left:50%;transform:translateX(-50%);}
+#demo-btn{top:calc(10px + var(--safe-t));left:6px;}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + var(--safe-b));background:#2a2a2a;color:#d0d0d0;font-size:12.5px;padding:10px 16px;border-radius:20px;display:none;z-index:200;max-width:86%;text-align:center;}
+#demo{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-end;z-index:100;} #demo.on{display:flex;}
+#demo .sheet{background:var(--bg);width:100%;max-width:460px;margin:0 auto;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + var(--safe-b));color:var(--text);}
+#demo .btn{margin-top:10px;}
+input.num{width:100%;border-radius:12px;border:1px solid var(--hr);background:var(--surface);color:var(--text);padding:12px;font-size:15px;font-family:inherit;}
+.verdict{background:var(--surface);border-radius:14px;padding:14px 16px;margin:6px 0;font-size:14px;line-height:1.7;text-align:left;width:100%;}
+.share{display:flex;justify-content:space-between;font-size:13.5px;padding:4px 0;border-top:1px solid var(--hr);margin-top:4px;}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="screen active" id="s-welcome"><div class="spacer"></div><div class="big">🌙</div>
+<h1 class="center" style="font-size:26px">专注时刻</h1>
+<p class="sub center" style="margin:10px 12px">不屏蔽任何App，也不需要任何系统权限。<br>把手机放下，让它自己黑屏、自己锁屏。</p>
+<div class="spacer"></div><button class="btn" onclick="go('s-home')">开始</button></div>
+
+<div class="screen" id="s-home">
+<h2 style="font-size:22px">选择一个场景</h2>
+<div style="margin-top:8px"><span class="badge" id="streak"></span></div>
+<div class="scenes" id="scene-grid"></div>
+<div class="spacer"></div>
+<p class="sub center" style="font-size:12px">原理：黑屏页保持常亮度极低，手机按你设置的“自动锁定”时间自己锁屏。<br>离开时通过系统事件判断你是锁屏放下，还是去用别的App。</p>
+</div>
+
+<div class="screen" id="s-setup">
+<h2 style="font-size:20px" id="setup-title"></h2><p class="sub" id="setup-desc" style="margin:6px 0 10px"></p>
+<div class="label">本次约定 / 议题（显示在黑屏页）</div><textarea id="topic"></textarea>
+<div class="label">时长</div>
+<div class="chips" id="dur-chips"></div>
+<div class="label" id="fr-label">一起放下手机的朋友（演示模拟）</div>
+<div class="chips" id="friends"></div>
+<div class="label">什么算违规</div><div class="chips" id="rule-chips"></div>
+<div class="label">豁免次数（回复消息等，单次≤60秒；来电始终豁免）</div><div class="chips" id="pass-chips"></div>
+<div class="label">惩罚</div><div class="chips" id="pen-chips"></div>
+<input class="num" id="custom-pen" placeholder="输入自定义惩罚，例如：唱一首歌" style="display:none;margin-bottom:10px">
+<p class="sub" style="font-size:12px">建议先到 设置 › 显示与亮度 › 自动锁定，改为 30 秒，放下手机后它会自己锁屏。</p>
+<div class="spacer"></div>
+<button class="btn" onclick="startSession()">开始，放下手机</button><button class="btn ghost" onclick="go('s-home')">返回</button></div>
+
+<div class="screen" id="s-lock">
+<button class="tiny" id="demo-btn" onclick="$('demo').classList.add('on')">演示</button>
+<div class="time" id="timer">00:00</div><div class="topic" id="lk-topic"></div>
+<div class="mem" id="lk-mem"></div><div class="rule" id="lk-rule"></div><div class="hint">放下手机，它会自己锁屏</div>
+<button class="tiny" id="end-btn" onclick="endEarly()">提前结束</button></div>
+
+<div class="screen" id="s-done"><div class="spacer"></div><div class="big" id="d-icon">✅</div>
+<h2 class="center" style="font-size:20px;line-height:1.5" id="d-title"></h2>
+<p class="sub center" id="d-msg" style="margin:12px 6px"></p>
+<div class="verdict" id="v-card"></div>
+<div id="v-bill" style="width:100%;display:none"><div class="label">账单总额（元，可选）</div><input class="num" id="bill-total" type="number" inputmode="decimal" placeholder="例如 388" oninput="renderShares()"><div id="v-shares"></div></div>
+<div class="spacer"></div><button class="btn" onclick="go('s-home')">返回首页</button></div>
+</div>
+
+<div id="toast"></div>
+<div id="demo"><div class="sheet"><h3 style="font-size:16px">演示控制（桌面测试用）</h3>
+<p class="sub" style="font-size:12px;margin-top:6px">网页无法得知手机是否锁屏，这里用按钮模拟 iOS 原生版会收到的系统事件。</p>
+<button class="btn sec" onclick="simLock()">🔒 模拟：锁屏放下手机，10秒后拿起</button>
+<button class="btn sec" onclick="simSwitch()">📱 模拟：切去别的App，10秒后回来</button>
+<button class="btn sec" onclick="simSMS()">💬 模拟：来了消息，回复30秒</button>
+<button class="btn sec" onclick="simCall()">📞 模拟：来电，接听2分钟</button>
+<div id="friend-sim"></div>
+<button class="btn sec" onclick="simFF()">⏩ 快进到结束</button>
+<button class="btn ghost" onclick="$('demo').classList.remove('on')">关闭</button></div></div>
+
+<script>
+/**
+ * FocusEngine —— "锁屏陪伴"会话状态机（纯逻辑，时间由外部传入，便于测试）
+ * 不屏蔽任何App。只回答三个问题：
+ *   1. 会话是否到时？  2. 用户是锁屏放下了手机，还是切去用别的App？  3. 何时该发出提醒？
+ * 时间单位：秒（Unix时间戳或任意单调时间均可）
+ */
+(function (root) {
+  const GRACE_DEFAULT = 3; // 秒：进入后台后多久内收到"设备已锁定"，才认定为锁屏
+
+  function create({ durationSec, startAt, graceSec = GRACE_DEFAULT, strict = false, passes = 0, passSec = 60 }) {
+    return {
+      phase: "running",        // running | completed | ended
+      startAt, endAt: startAt + durationSec, durationSec, graceSec,
+      pickups: 0,              // 锁屏后又拿起手机的次数
+      switches: 0,             // 离开去用别的App的次数
+      bgSince: null, bgLocked: false, lockedAt: null,
+      pendingNudgeAt: null,    // 平台应在此刻发出"回来吧"提醒（锁屏或回到前台时取消）
+      endedEarly: false,
+      strict, passSec, passesLeft: passes, passUsed: 0,   // strict:拿起手机也算违规；passes:豁免次数
+      violations: 0, callExempts: 0, quitViolation: false, log: [],
+      callStart: null, callEnd: null,
+    };
+  }
+
+  function tick(s, now) {
+    if (s.phase === "running" && now >= s.endAt) s.phase = "completed";
+    return s;
+  }
+
+  function onBackground(s, now) {
+    if (s.phase !== "running") return s;
+    s.bgSince = now;
+    // 兼容"先收到锁定通知、后进入后台"的顺序
+    s.bgLocked = s.lockedAt !== null && now - s.lockedAt <= s.graceSec;
+    s.pendingNudgeAt = s.bgLocked ? null : now + s.graceSec;
+    return s;
+  }
+
+  function onDeviceLocked(s, now) {
+    if (s.phase !== "running") return s;
+    s.lockedAt = now;
+    if (s.bgSince !== null && now - s.bgSince <= s.graceSec) {
+      s.bgLocked = true;
+      s.pendingNudgeAt = null; // 取消提醒
+    }
+    return s;
+  }
+
+  function onCallStarted(s, now) { if (s.phase === "running") { s.callStart = now; s.callEnd = null; } return s; }
+  function onCallEnded(s, now) { if (s.callStart !== null) s.callEnd = now; return s; }
+
+  function onForeground(s, now) {
+    if (s.phase !== "running") return s;
+    if (now >= s.endAt) { s.phase = "completed"; }
+    else if (s.bgSince !== null) {
+      const away = now - s.bgSince;
+      // 来电豁免：离开期间有通话（或通话在离开前5秒内结束）
+      const callOverlap = s.callStart !== null && s.callStart <= now && (s.callEnd === null || s.callEnd >= s.bgSince - 5);
+      if (callOverlap) { s.callExempts += 1; s.log.push({ t: now, type: "call" }); }
+      else {
+        const kind = s.bgLocked ? "pickup" : (away > s.graceSec ? "switch" : null);
+        if (kind === "pickup") s.pickups += 1; else if (kind === "switch") s.switches += 1;
+        if (kind && (kind === "switch" || s.strict)) {
+          const canPass = s.passesLeft > 0 && (kind === "pickup" || away <= s.passSec);
+          if (canPass) { s.passesLeft -= 1; s.passUsed += 1; s.log.push({ t: now, type: "pass:" + kind }); }
+          else { s.violations += 1; s.log.push({ t: now, type: "violation:" + kind }); }
+        }
+      }
+    }
+    if (s.callEnd !== null) { s.callStart = null; s.callEnd = null; }
+    s.bgSince = null; s.bgLocked = false; s.lockedAt = null; s.pendingNudgeAt = null;
+    return s;
+  }
+
+  function nudgeDue(s, now) {
+    return s.phase === "running" && s.pendingNudgeAt !== null && now >= s.pendingNudgeAt;
+  }
+
+  function giveUp(s, asViolation = false) {
+    if (s.phase === "running") {
+      s.phase = "ended"; s.endedEarly = true;
+      if (asViolation) { s.violations += 1; s.quitViolation = true; }
+    }
+    return s;
+  }
+
+  function summary(s) {
+    const done = s.phase === "completed";
+    let text;
+    if (!done) text = "本次提前结束了，没关系，下次再试。";
+    else if (s.switches === 0 && s.pickups === 0) text = "全程没有拿起手机，一次都没有。";
+    else if (s.switches === 0) text = "全程没有切去别的App，中途拿起手机 " + s.pickups + " 次。";
+    else text = "中途切去别的App " + s.switches + " 次，拿起手机 " + s.pickups + " 次。";
+    if (done && s.violations > 0) text += " 违规 " + s.violations + " 次。";
+    if (done && s.callExempts > 0) text += " 来电豁免 " + s.callExempts + " 次。";
+    if (done && s.passUsed > 0) text += " 使用豁免 " + s.passUsed + " 次。";
+    return { completed: done, pickups: s.pickups, switches: s.switches, violations: s.violations, text };
+  }
+
+  const api = { create, tick, onBackground, onDeviceLocked, onForeground, onCallStarted, onCallEnded, nudgeDue, giveUp, summary, GRACE_DEFAULT };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.FocusEngine = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+/**
+ * FocusSettlement —— 约定结束后的"判决"与买单金额计算（纯逻辑）
+ * 只做展示与计算，不涉及任何真实支付。金额按"分"做整数运算，避免浮点误差。
+ *
+ * 买单规则（mode = 'bill'）：
+ *   无人违规 → 全员按常规 AA
+ *   1 人违规 → 该人买单
+ *   ≥2 人违规 → 仅违规者 AA，其余人免单
+ * 任务类惩罚（mode = 'task'）：违规者执行约定的惩罚内容，不涉及金额
+ */
+(function (root) {
+  const yuan = (c) => (c / 100).toFixed(2);
+
+  // 把 cents 平均分给 names；除不尽的零头（分）从前往后每人多1分，保证总和精确等于总额
+  function evenShares(names, cents) {
+    const base = Math.floor(cents / names.length), rem = cents % names.length;
+    const out = {};
+    names.forEach((n, i) => { out[n] = yuan(base + (i < rem ? 1 : 0)); });
+    return out;
+  }
+
+  function settle({ members, violations = {}, mode, text = "", total = null }) {
+    const violators = members.filter((m) => (violations[m] || 0) > 0);
+    const cents = (total === null || total === "" || isNaN(Number(total)) || Number(total) < 0)
+      ? null : Math.round(Number(total) * 100);
+    const join = (a) => a.join("、");
+
+    if (mode === "bill") {
+      if (violators.length === 0)
+        return { type: "none", violators, text: "无人违规，大家按常规 AA。",
+                 shares: cents === null ? null : evenShares(members, cents) };
+      if (violators.length === 1)
+        return { type: "single", violators, text: `${violators[0]} 违规 → 今晚由 ${violators[0]} 买单`,
+                 shares: cents === null ? null : { [violators[0]]: yuan(cents) } };
+      return { type: "split", violators,
+               text: `${join(violators)} 共 ${violators.length} 人违规 → 违规者 AA 买单，其余人免单`,
+               shares: cents === null ? null : evenShares(violators, cents) };
+    }
+    if (violators.length === 0)
+      return { type: "none", violators, text: "全员零违规，本次没有惩罚 🎉", shares: null };
+    return { type: "task", violators, text: `${join(violators)} 违规 → ${text}`, shares: null };
+  }
+
+  const api = { settle, evenShares };
+  if (typeof module !== "undefined" && module.exports) module.exports = api;
+  else root.FocusSettlement = api;
+})(typeof window !== "undefined" ? window : globalThis);
+
+const KEY='focusMomentV4';
+const SOLO_PENS=[{id:'log',label:'仅记录',mode:'none'},{id:'streak',label:'违规则今日不计连续天数',mode:'streak'}];
+const CUSTOM={id:'custom',label:'✏️ 自定义',mode:'task'};
+const SCENES=[
+ {id:'dinner',icon:'🍽️',name:'朋友聚餐',topic:'今晚好好吃饭，好好聊天',desc:'面对面吃饭，先碰手机的人买单',group:true,strict:true,
+  pens:[{id:'bill',label:'🧾 买单',mode:'bill',rule:'先碰手机的人买单；多人违规则违规者 AA'},
+        {id:'drink',label:'🥤 请喝饮品',mode:'task',text:'请大家喝一杯饮品'},
+        {id:'story',label:'🎤 讲糗事',mode:'task',text:'讲一个自己的糗事'}]},
+ {id:'study',icon:'📚',name:'深度学习',topic:'专注完成这一段学习',desc:'一起专注，违规者有小惩罚',group:true,strict:false,
+  pens:[{id:'tea',label:'🧋 请奶茶',mode:'task',text:'下次请大家喝奶茶'},
+        {id:'sum',label:'📝 写总结',mode:'task',text:'写一份今日学习总结发到群里'},
+        {id:'host',label:'📣 下次发起',mode:'task',text:'下次由你来发起约定'}]},
+ {id:'sleep',icon:'🌙',name:'睡前放下',topic:'今天辛苦了，放下手机好好睡',desc:'睡前给自己一段无屏幕时间',group:false,strict:false,pens:[]},
+ {id:'meeting',icon:'💼',name:'重要会议',soon:'V1.2'}];
+const DURS=[{l:'30秒（演示）',s:30},{l:'15分钟',s:900},{l:'45分钟',s:2700},{l:'90分钟',s:5400}];
+const NAMES=['小李','小王','阿雅','老陈','Amy','小周','阿杰'];
+let st=(function(){try{return Object.assign({streak:0,lastDone:null},JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){return{streak:0,lastDone:null};}})();
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st));}catch(e){}};
+const $=id=>document.getElementById(id);
+let offset=0; const clock=()=>Date.now()/1000+offset;
+let scene=null,durIdx=0,friends=0,strict=false,passes=1,penId=null,S=null,F=null,tH=null,pen=null,ledger={};
+
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$(id).classList.add('active');
+ document.body.classList.toggle('locked',id==='s-lock'); if(id==='s-home')renderHome();}
+function renderHome(){$('streak').textContent='🔥 连续 '+st.streak+' 天';
+ $('scene-grid').innerHTML=SCENES.map(s=>s.soon?`<div class="scene soon">${s.icon} ${s.name}<small>即将上线 · ${s.soon}</small></div>`:
+ `<div class="scene" onclick="pick('${s.id}')"><div style="font-size:26px">${s.icon}</div>${s.name}</div>`).join('');}
+function pick(id){scene=SCENES.find(x=>x.id===id);durIdx=0;friends=0;strict=scene.strict;passes=1;penId=null;
+ $('setup-title').textContent=scene.icon+' '+scene.name;$('setup-desc').textContent=scene.desc;$('topic').value=scene.topic;renderSetup();go('s-setup');}
+function penOptions(){return friends>0?scene.pens.concat([CUSTOM]):SOLO_PENS;}
+function renderSetup(){
+ const opts=penOptions(); if(!opts.some(o=>o.id===penId))penId=opts[0].id;
+ $('dur-chips').innerHTML=DURS.map((d,i)=>`<span class="chip ${i===durIdx?'on':''}" onclick="durIdx=${i};renderSetup()">${d.l}</span>`).join('');
+ $('fr-label').style.display=$('friends').style.display=scene.group?'':'none';
+ let f='';for(let i=0;i<friends;i++)f+=`<span class="chip done">${NAMES[i%NAMES.length]}</span>`;
+ $('friends').innerHTML=f+(friends<7?`<span class="chip" onclick="friends++;renderSetup()">＋ 邀请一位</span>`:'');
+ $('rule-chips').innerHTML=[[false,'标准：切去别的App才算'],[true,'严格：拿起手机也算']].map(([v,l])=>`<span class="chip ${strict===v?'on':''}" onclick="strict=${v};renderSetup()">${l}</span>`).join('');
+ $('pass-chips').innerHTML=[0,1,2].map(n=>`<span class="chip ${passes===n?'on':''}" onclick="passes=${n};renderSetup()">${n} 次</span>`).join('');
+ $('pen-chips').innerHTML=opts.map(o=>`<span class="chip ${penId===o.id?'on':''}" onclick="penId='${o.id}';renderSetup()">${o.label}</span>`).join('');
+ $('custom-pen').style.display=penId==='custom'?'block':'none';}
+
+function members(){const a=['我'];for(let i=0;i<friends;i++)a.push(NAMES[i%NAMES.length]);return a;}
+function penText(){return pen.id==='custom'?($('custom-pen').value.trim()||'完成一个大家约定的小惩罚'):pen.text;}
+function ruleLine(){const p=[];
+ if(friends>0&&pen.mode==='bill')p.push(pen.rule);else if(friends>0)p.push('违规者：'+penText());
+ p.push(S.strict?'拿起手机也算违规':'切去别的App才算违规');
+ p.push('剩余豁免 '+S.passesLeft+' 次 · 来电不算');return p.join('<br>');}
+function startSession(){
+ pen=penOptions().find(o=>o.id===penId); offset=0;
+ S=FocusEngine.create({durationSec:DURS[durIdx].s,startAt:clock(),strict,passes});
+ ledger={};members().slice(1).forEach(n=>ledger[n]=0);
+ $('lk-topic').textContent=$('topic').value.trim()||scene.topic;
+ renderLock();go('s-lock');
+ $('friend-sim').innerHTML=members().slice(1).map((n,i)=>`<button class="btn sec" onclick="friendViolate(${i})">⚠️ 模拟：${n} 拿起手机违规</button>`).join('');
+ clearInterval(tH);tH=setInterval(loop,500);}
+function fmt(sec){sec=Math.max(0,Math.ceil(sec));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;
+ return (h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function renderLock(){
+ $('timer').textContent=fmt(S.endAt-clock());
+ $('lk-rule').innerHTML=ruleLine();
+ const parts=[];if(friends>0){parts.push('我 '+(S.violations?'⚠️'+S.violations:'✓'));
+  members().slice(1).forEach(n=>parts.push(n+' '+(ledger[n]?'⚠️'+ledger[n]:'✓')));}
+ else if(S.violations)parts.push('违规 '+S.violations+' 次');
+ $('lk-mem').textContent=parts.join('　');}
+function loop(){if(!S)return;FocusEngine.tick(S,clock());renderLock();if(S.phase==='completed')finish();}
+
+function finish(){clearInterval(tH);const r=FocusEngine.summary(S);F=Object.assign({},S);
+ const group=friends>0;
+ if(r.completed){const t=new Date().toDateString();
+  const blocked=!group&&pen.mode==='streak'&&S.violations>0;
+  if(!blocked&&st.lastDone!==t){st.streak++;st.lastDone=t;save();}}
+ const total=group?friends+1:1, bad=group?members().filter(n=>n==='我'?S.violations>0:ledger[n]>0).length:S.violations;
+ $('d-icon').textContent=!r.completed?'🕊️':(group?(bad===0?'🤝':'🧾'):'✅');
+ $('d-title').innerHTML=!r.completed?'本次提前结束':(group?(bad===0?total+' 个人全员零违规':total+' 个人完成了「'+scene.name+'」'):'专注完成');
+ $('d-msg').textContent=r.text;
+ renderVerdict(r.completed);S=null;go('s-done');}
+function verdict(total){
+ const v={我:F.violations};Object.keys(ledger).forEach(n=>v[n]=ledger[n]);
+ return FocusSettlement.settle({members:members(),violations:v,mode:pen.mode==='bill'?'bill':'task',text:pen.mode==='task'?penText():'',total});}
+function renderVerdict(completed){
+ const card=$('v-card'),bill=$('v-bill');bill.style.display='none';
+ if(friends===0){const msg=F.violations===0?'零违规 🎉':'违规 '+F.violations+' 次'+(pen.mode==='streak'?'，今日不计连续天数':'');
+  card.innerHTML=`<b>判决</b><br>${msg}`;return;}
+ const r=verdict(null);card.innerHTML=`<b>判决</b><br>${r.text}`;
+ if(pen.mode==='bill'){bill.style.display='block';$('bill-total').value='';$('v-shares').innerHTML='';}}
+function renderShares(){const r=verdict($('bill-total').value);
+ $('v-shares').innerHTML=r.shares?Object.entries(r.shares).map(([n,a])=>`<div class="share"><span>${n}</span><b>¥ ${a}</b></div>`).join(''):'';}
+function endEarly(){if(!S)return;const g=friends>0&&pen.mode!=='none';
+ if(!confirm(g?'提前结束会被计为违规，确定吗？':'确定提前结束吗？'))return;
+ FocusEngine.giveUp(S,g);finish();}
+
+/* 系统事件 → 引擎（真实：浏览器可见性；演示：按钮模拟） */
+function toast(t){const e=$('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',3500);}
+const snap=()=>({sw:S.switches,pk:S.pickups,vi:S.violations,pa:S.passUsed,ce:S.callExempts});
+function afterReturn(b){
+ if(!S)return; FocusEngine.tick(S,clock()); if(S.phase==='completed'){finish();return;}
+ renderLock();
+ if(S.callExempts>b.ce)toast('来电已豁免，不算违规');
+ else if(S.passUsed>b.pa)toast('用掉 1 次豁免，剩余 '+S.passesLeft+' 次');
+ else if(S.violations>b.vi)toast('违规 +1，回到专注吧');
+ else if(S.switches>b.sw)toast('刚才离开去用了别的App，回到专注吧');
+ else if(S.pickups>b.pk)toast('拿起手机 '+S.pickups+' 次了，放下它吧');}
+document.addEventListener('visibilitychange',()=>{
+ if(!S)return; if(document.hidden){FocusEngine.onBackground(S,clock());}
+ else{const b=snap();FocusEngine.onForeground(S,clock());afterReturn(b);}});
+const closeDemo=()=>$('demo').classList.remove('on');
+function simLock(){if(!S)return;closeDemo();const b=snap();const t=clock();
+ FocusEngine.onBackground(S,t);FocusEngine.onDeviceLocked(S,t+0.5);offset+=10;FocusEngine.onForeground(S,clock());afterReturn(b);}
+function simSwitch(){if(!S)return;closeDemo();const b=snap();
+ FocusEngine.onBackground(S,clock());offset+=10;FocusEngine.onForeground(S,clock());afterReturn(b);}
+function simSMS(){if(!S)return;closeDemo();const b=snap();
+ FocusEngine.onBackground(S,clock());offset+=30;FocusEngine.onForeground(S,clock());afterReturn(b);}
+function simCall(){if(!S)return;closeDemo();const b=snap();
+ FocusEngine.onBackground(S,clock());FocusEngine.onCallStarted(S,clock());offset+=120;FocusEngine.onCallEnded(S,clock());
+ FocusEngine.onForeground(S,clock());afterReturn(b);}
+function friendViolate(i){if(!S)return;closeDemo();const n=members()[i+1];ledger[n]++;renderLock();toast(n+' 拿起了手机，违规 +1');}
+function simFF(){if(!S)return;closeDemo();offset+=S.endAt-clock()+0.1;loop();}
+renderHome();
+</script>
+</body>
+</html>
